@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"flag"
 	"fmt"
 	"io"
 	"net"
@@ -68,13 +69,18 @@ func handleConnection(conn net.Conn, db *DB) {
 }
 
 func main() {
+	var port int
+	flag.IntVar(&port, "port", 6379, "Port to listen on")
+	flag.Parse()
 	// start with the listner
-	l, err := net.Listen("tcp", "0.0.0.0:6379")
+	address := fmt.Sprintf(":%d", port)
+	// start with the listner
+	l, err := net.Listen("tcp", address)
 	if err != nil {
 		fmt.Println("Failed to bind port on 6379")
 		os.Exit(1)
 	}
-	fmt.Println("Listnening on PORT 6379")
+	fmt.Printf("Listening on port: %d\n", port)
 	db := NewDB()
 	// start listening for connections
 	for {
