@@ -7,21 +7,20 @@ import (
 type Storage interface {
 	Get(key string) (string, bool)
 	Set(key, value string, px int64)
-	GetInfo() map[string]string
-	SetConfig(key, value string)
+	// GetInfo() map[string]string
+	// SetConfig(key, value string)
+	// IncrementMasterReplOffset(n int)
 }
 
 type InMemoryCache struct {
 	data   map[string]string
 	expiry map[string]int64
-	config CacheConfig
 }
 
 func NewDB() *InMemoryCache {
 	return &InMemoryCache{
 		data:   make(map[string]string),
 		expiry: make(map[string]int64),
-		config: NewCacheConfig(),
 	}
 }
 
@@ -45,25 +44,6 @@ func (cache *InMemoryCache) Set(key, value string, px int64) {
 		cache.expiry[key] = time.Now().UnixMilli() + px
 	} else {
 		delete(cache.expiry, key)
-	}
-}
-
-func (cache *InMemoryCache) GetInfo() map[string]string {
-	return map[string]string{
-		"role":               cache.config.Role,
-		"master_replid":      cache.config.MasterReplid,
-		"master_repl_offset": cache.config.MasterReplOffset,
-	}
-}
-
-func (cache *InMemoryCache) SetConfig(key, value string) {
-	switch key {
-	case "role":
-		cache.config.Role = value
-	case "master_replid":
-		cache.config.MasterReplid = value
-	case "master_repl_offset":
-		cache.config.MasterReplOffset = value
 	}
 }
 

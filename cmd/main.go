@@ -24,8 +24,10 @@ func main() {
 	flag.Parse()
 
 	database := database.NewDB()
+	// initialize new state
+	state := server.NewState()
 
-	srv, err := server.NewServer(port, replica, database)
+	srv, err := server.NewServer(port, replica, database, state)
 	if err != nil {
 		fmt.Printf("Failed to create server: %v\n", err)
 		os.Exit(1)

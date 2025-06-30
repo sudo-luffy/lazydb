@@ -12,9 +12,9 @@ import (
 func ParseRESP(reader *bufio.Reader) ([]string, error) {
 	line, err := reader.ReadString('\n')
 	if err != nil {
+		fmt.Println(line)
 		return nil, err
 	}
-
 	if len(line) == 0 || line[0] != '*' {
 		return nil, fmt.Errorf("invalid array prefix: %q", strings.TrimSpace(line))
 	}
@@ -41,7 +41,7 @@ func ParseRESP(reader *bufio.Reader) ([]string, error) {
 			return nil, fmt.Errorf("invalid bulk string length: %q", lengthStr)
 		}
 
-		data := make([]byte, length+2) // +2 for \r\n
+		data := make([]byte, length+2)
 		_, err = io.ReadFull(reader, data)
 		if err != nil {
 			return nil, fmt.Errorf("failed to read bulk string data: %w", err)
@@ -66,6 +66,11 @@ func EncodeNullBulkString() []byte {
 	return []byte("$-1\r\n")
 }
 
+func EncodeInteger(num int) []byte {
+	strNum := fmt.Sprintf(":%d\r\n", num)
+	return []byte(strNum)
+}
+
 // EncodeError encodes an error response (-ERR <message>\r\n).
 func EncodeError(msg string) []byte {
 	return []byte(fmt.Sprintf("-ERR %s\r\n", msg))
@@ -76,7 +81,7 @@ func EncodeArray(elements []string) []byte {
 	var builder strings.Builder
 	builder.WriteString(fmt.Sprintf("*%d\r\n", len(elements)))
 	for _, elem := range elements {
-		builder.Write(EncodeBulkString(elem)) // EncodeBulkString now returns []byte
+		builder.Write(EncodeBulkString(elem))
 	}
 	return []byte(builder.String())
 }
@@ -88,4 +93,21 @@ func EncodeMap(m map[string]string) []byte {
 		infoLines = append(infoLines, fmt.Sprintf("%s:%s", k, v))
 	}
 	return EncodeBulkString(strings.Join(infoLines, "\n"))
+}
+
+func SendAndExpect(writer *bufio.Writer, reader *bufio.Reader, data []byte, expected string) error {
+	if _, err := writer.Write(data); err != nil {
+		return fmt.Errorf("failed to send data: %w", err)
+	}
+	if err := writer.Flush(); err != nil {
+		return fmt.Errorf("failed to flush data: %w", err)
+	}
+	line, err := reader.ReadString('\n')
+	if err != nil {
+		return fmt.Errorf("failed to read response: %w", err)
+	}
+	if strings.TrimSpace(line) != expected {
+		return fmt.Errorf("unexpected response: expected '%s', got '%s'", expected, strings.TrimSpace(line))
+	}
+	return nil
 }
